@@ -59,6 +59,13 @@ jobs:
       run: chmod +x android/gradlew
       
     - name: Build Android App Bundle
+      env:
+        # Sentry source maps upload needs org/project/token (see .env.example).
+        # Disabled by default until SENTRY_AUTH_TOKEN is configured as a repo secret.
+        SENTRY_DISABLE_AUTO_UPLOAD: ${{ secrets.SENTRY_AUTH_TOKEN == '' && 'true' || 'false' }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
       run: |
         cd android
         ./gradlew clean
