@@ -41,6 +41,7 @@
         }
       ],
       "./plugins/withAndroidManifestFix.js",
+      "./plugins/withReactNativeIapFix.js",
       "@sentry/react-native/expo"
     ],
     "extra": {
