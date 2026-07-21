@@ -1,0 +1,83 @@
+name: Build Android App Bundle
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+          cmdline-tools-version: 9477386
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: true
+          packages: "platform-tools platforms;android-33 build-tools;33.0.2 ndk;25.2.9519653 cmake;3.22.1"
+        
+    - name: Accept Android SDK licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        
+    - name: Debug Android SDK
+      run: |
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        ls -la $ANDROID_HOME || true
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list_installed || true
+      
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Install Expo CLI
+      run: npm install -g @expo/cli@latest
+      
+    - name: Run Expo prebuild
+      run: npx expo prebuild --platform android --clean --no-install
+      
+    - name: Make gradlew executable
+      run: chmod +x android/gradlew
+      
+    - name: Build Android App Bundle
+      run: |
+        cd android
+        ./gradlew clean
+        ./gradlew bundleRelease --no-daemon --stacktrace
+        
+    - name: Upload App Bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-bundle
+        path: android/app/build/outputs/bundle/release/app-release.aab
+        retention-days: 30
+        
+    - name: Upload build logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          android/app/build/reports/**/*
+          android/build/reports/**/*
+        if-no-files-found: ignore
+        retention-days: 7
